@@ -1,0 +1,4 @@
+Dictionary: en-fr from DanielGregorini/koreader-dicts
+License: CeCILL-C
+Source: https://github.com/DanielGregorini/koreader-dicts/releases/download/v1.2.0/en-fr.zip
+Original source credits and attribution: https://github.com/DanielGregorini/koreader-dicts

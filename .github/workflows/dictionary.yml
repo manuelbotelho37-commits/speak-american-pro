@@ -1,0 +1,27 @@
+name: Installer le grand dictionnaire hors ligne
+on:
+  push:
+    paths:
+      - '.github/workflows/dictionary.yml'
+      - 'tools/build_dictionary.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Télécharger et convertir le dictionnaire en-fr
+        run: python tools/build_dictionary.py
+      - name: Enregistrer le dictionnaire dans Speak American
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dictionary/
+          git diff --cached --quiet || (git commit -m "Installer le dictionnaire anglais-français complet" && git push)

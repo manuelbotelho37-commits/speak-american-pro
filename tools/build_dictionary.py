@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """Convert CeCILL-C en-fr StarDict into compact JSON shards for Speak American."""
 import gzip,json,pathlib,struct,urllib.request,zipfile,io,re
-url="https://github.com/DanielGregorini/koreader-dicts/releases/latest/download/en-fr.zip"
+api="https://api.github.com/repos/DanielGregorini/koreader-dicts/releases/latest"
+request=urllib.request.Request(api,headers={"User-Agent":"SpeakAmericanDictionaryBuilder/1.0","Accept":"application/vnd.github+json"})
+with urllib.request.urlopen(request,timeout=60) as response: release=json.load(response)
+assets=release.get("assets",[])
+asset=next((a for a in assets if a["name"]=="en-fr.zip"),None)
+if asset is None: raise RuntimeError("en-fr.zip absent de la dernière version : "+str([a["name"] for a in assets]))
+url=asset["browser_download_url"]
 request=urllib.request.Request(url,headers={"User-Agent":"SpeakAmericanDictionaryBuilder/1.0"})
-with urllib.request.urlopen(request,timeout=120) as response: archive=response.read()
+with urllib.request.urlopen(request,timeout=180) as response: archive=response.read()
 z=zipfile.ZipFile(io.BytesIO(archive))
 names=z.namelist()
 idxname=next(n for n in names if n.endswith(".idx"))

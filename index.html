@@ -25,6 +25,28 @@ function playStory(rate=.9){sayUS(story().lines.map(x=>x.replace(/^[AB]: /,'')).
 function repeatStory(){let phrase=story().repeat; sayUS(phrase);let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('storyFeedback').textContent='Écoute et répète : '+phrase+' (micro indisponible).';return}let r=new SR();r.lang='en-US';r.interimResults=false;$('storyFeedback').textContent='Répète après le son : '+phrase;r.onresult=e=>{$('storyFeedback').textContent='Tu as dit : '+e.results[0][0].transcript+' · Modèle : '+phrase};r.onerror=()=>{$('storyFeedback').textContent='Micro indisponible. Répète : '+phrase};try{r.start()}catch(e){$('storyFeedback').textContent='Autorise le microphone dans Chrome.'}}
 
 const coachLexicon={
+for:['for','pour / destiné à / pendant (selon le contexte)','For here, please. = Sur place, s’il vous plaît.\nFor you. = Pour toi.'],
+here:['here','ici / sur place','For here, please. = Sur place, s’il vous plaît.'],
+a:['a','un / une','A coffee, please. = Un café, s’il vous plaît.'],
+the:['the','le / la / les','The coffee. = Le café.'],
+to:['to','à / vers / pour','To go, please. = À emporter, s’il vous plaît.'],
+is:['is','est','It is late. = Il est tard.'],
+it:['it','il / elle / ce (pour une chose ou situation)','It is late. = Il est tard.'],
+do:['do','faire ; auxiliaire dans les questions','Do you like it? = Est-ce que tu aimes ça ?'],
+of:['of','de','A cup of coffee. = Une tasse de café.'],
+in:['in','dans / en','I live in France. = J’habite en France.'],
+on:['on','sur','On Main Street. = Sur Main Street.'],
+at:['at','à / chez / au','At home. = À la maison.'],
+and:['and','et','Coffee and tea. = Café et thé.'],
+or:['or','ou','Hot or iced? = Chaud ou glacé ?'],
+with:['with','avec','With milk. = Avec du lait.'],
+have:['have','avoir','Have a good day! = Bonne journée !'],
+like:['like','aimer / comme','I like coffee. = J’aime le café.'],
+this:['this','ce / cette / ceci','This is good. = C’est bon.'],
+that:['that','ça / cela / que','That sounds good. = Ça me paraît bien.'],
+yes:['yes','oui','Yes, please. = Oui, s’il vous plaît.'],
+no:['no','non','No, thanks. = Non, merci.'],
+
 latte:['latte','café au lait à base d’expresso et de lait chaud','Can I get a latte? = Je peux avoir un café latte ?\nPrononciation américaine : LAH-tay.'],
 late:['late','tard / en retard','I am late. = Je suis en retard.\nIt is late. = Il est tard.'],
 hello:['hello','bonjour','Hello! = Bonjour !'],
@@ -85,6 +107,6 @@ function renderWords(el,t){el.textContent='';let parts=t.split(/([A-Za-z]+(?:[�
 function toggleCoach(force){let box=$('coachBox');let show=typeof force==='boolean'?force:box.classList.contains('hidden');box.classList.toggle('hidden',!show);$('coachToggle').setAttribute('aria-expanded',String(show));if(show)$('coachInput').focus()}
 function coachWord(w){toggleCoach(true);$('coachInput').value=w;askCoach()}
 function coachAnswer(text){$('coachAnswer').textContent=text}
-function askCoach(){let raw=$('coachInput').value.trim();if(!raw){coachAnswer('Écris un mot ou dicte ta question.');return}let clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');let match=clean.match(/(?:veut dire|signifie|meaning of|traduction de|c.est quoi)\s+([a-z’']+)/);let words=(match?[match[1]]:clean.match(/[a-z]+(?:[’'][a-z]+)?/g)||[]);let key=[...words].reverse().find(w=>coachLexicon[w.replace(/[’']/g,'')]);if(!key){coachAnswer("Je n'ai pas encore d'explication fiable pour cette question. Essaie de toucher un mot anglais de la leçon ou de demander un mot simple. Ce professeur gratuit fonctionne avec un dictionnaire intégré, pas une IA en ligne.");return}let entry=coachLexicon[key.replace(/[’']/g,'')];coachAnswer(entry[0]+' = '+entry[1]+'\n\nExemple : '+entry[2]);if('speechSynthesis'in window){let u=new SpeechSynthesisUtterance(entry[0]);u.lang='en-US';u.rate=.8;let v=speechSynthesis.getVoices().find(v=>v.lang.toLowerCase()==='en-us');if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u)}}
+function askCoach(){let raw=$('coachInput').value.trim();if(!raw){coachAnswer('Écris un mot ou dicte ta question.');return}let clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');let phrases={'for here':'For here, please. = Sur place, s’il vous plaît.\nFor = pour, mais dans cette expression, for here veut dire sur place.','to go':'To go, please. = À emporter, s’il vous plaît.','can i get':'Can I get…? = Est-ce que je peux avoir… ?\nExpression très courante aux États-Unis.'};let phrase=Object.keys(phrases).find(p=>clean.includes(p));if(phrase){coachAnswer(phrases[phrase]);return}let words=clean.match(/[a-z]+(?:[’'][a-z]+)?/g)||[];let key=[...words].reverse().find(w=>coachLexicon[w.replace(/[’']/g,'')]);if(!key){coachAnswer("Je ne connais pas encore ce mot. Le professeur actuel est un dictionnaire local, pas une IA Claude. Tu peux poser une autre question ou toucher un mot de la leçon.");return}let entry=coachLexicon[key.replace(/[’']/g,'')];coachAnswer(entry[0]+' = '+entry[1]+'\n\nExemple : '+entry[2]);if('speechSynthesis'in window){let u=new SpeechSynthesisUtterance(entry[0]);u.lang='en-US';u.rate=.8;let v=speechSynthesis.getVoices().find(v=>v.lang.toLowerCase()==='en-us');if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u)}}
 function coachListen(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){coachAnswer("Le micro de dictée n'est pas disponible dans ce navigateur. Écris ta question à la place.");return}let r=new SR();r.lang='fr-FR';r.interimResults=false;coachAnswer('Je t’écoute…');r.onresult=e=>{$('coachInput').value=e.results[0][0].transcript;askCoach()};r.onerror=e=>coachAnswer('Micro indisponible : '+e.error+'. Tu peux écrire ta question.');try{r.start()}catch(e){coachAnswer('Impossible de démarrer le micro. Vérifie son autorisation dans Chrome.')}}
 function resetConfirm(){if(confirm('Effacer toute ta progression sur cet appareil ?')){localStorage.removeItem(KEY);location.reload()}}render();</script></body></html>

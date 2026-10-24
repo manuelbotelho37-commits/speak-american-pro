@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speak American</title>
+<style>
+body{margin:0;background:#0b1730;color:#f5d58a;font-family:Arial,sans-serif;text-align:center;padding:32px 18px}h1{margin-top:55px;font-size:38px}p{color:#fff;font-size:18px}button{background:#d8b66a;color:#0b1730;border:0;border-radius:12px;padding:16px 22px;font-size:18px;font-weight:bold;margin:12px}#phrase{margin:35px auto;font-size:26px;max-width:500px}small{color:#ccc}
+</style>
+</head>
+<body>
+<h1>Speak American</h1>
+<p>Apprends à parler anglais américain</p>
+<div id="phrase">Hello! How are you?</div>
+<button onclick="parler()">Écouter en américain</button>
+<button onclick="suivant()">Phrase suivante</button>
+<p id="traduction">Bonjour ! Comment vas-tu ?</p>
+<small>Gratuit • Sans abonnement</small>
+<script>
+const phrases=[['Hello! How are you?','Bonjour ! Comment vas-tu ?'],['My name is Manuel.','Je m’appelle Manuel.'],['I would like a coffee, please.','Je voudrais un café, s’il vous plaît.'],['Where is the nearest restaurant?','Où est le restaurant le plus proche ?']];let i=0;function suivant(){i=(i+1)%phrases.length;document.getElementById('phrase').textContent=phrases[i][0];document.getElementById('traduction').textContent=phrases[i][1]}function parler(){if(!('speechSynthesis'in window)){alert('Lecture vocale indisponible');return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(phrases[i][0]);u.lang='en-US';u.rate=.8;speechSynthesis.speak(u)}
+</script>
+</body>
+</html>

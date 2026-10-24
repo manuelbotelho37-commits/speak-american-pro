@@ -107,6 +107,33 @@ function renderWords(el,t){el.textContent='';let parts=t.split(/([A-Za-z]+(?:[�
 function toggleCoach(force){let box=$('coachBox');let show=typeof force==='boolean'?force:box.classList.contains('hidden');box.classList.toggle('hidden',!show);$('coachToggle').setAttribute('aria-expanded',String(show));if(show)$('coachInput').focus()}
 function coachWord(w){toggleCoach(true);$('coachInput').value=w;askCoach()}
 function coachAnswer(text){$('coachAnswer').textContent=text}
-function askCoach(){let raw=$('coachInput').value.trim();if(!raw){coachAnswer('Écris un mot ou dicte ta question.');return}let clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');let phrases={'for here':'For here, please. = Sur place, s’il vous plaît.\nFor = pour, mais dans cette expression, for here veut dire sur place.','to go':'To go, please. = À emporter, s’il vous plaît.','can i get':'Can I get…? = Est-ce que je peux avoir… ?\nExpression très courante aux États-Unis.'};let phrase=Object.keys(phrases).find(p=>clean.includes(p));if(phrase){coachAnswer(phrases[phrase]);return}let words=clean.match(/[a-z]+(?:[’'][a-z]+)?/g)||[];let key=[...words].reverse().find(w=>coachLexicon[w.replace(/[’']/g,'')]);if(!key){coachAnswer("Je ne connais pas encore ce mot. Le professeur actuel est un dictionnaire local, pas une IA Claude. Tu peux poser une autre question ou toucher un mot de la leçon.");return}let entry=coachLexicon[key.replace(/[’']/g,'')];coachAnswer(entry[0]+' = '+entry[1]+'\n\nExemple : '+entry[2]);if('speechSynthesis'in window){let u=new SpeechSynthesisUtterance(entry[0]);u.lang='en-US';u.rate=.8;let v=speechSynthesis.getVoices().find(v=>v.lang.toLowerCase()==='en-us');if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u)}}
+const dictionaryCache={};
+const usVariants={color:'couleur',favorite:'préféré',neighbor:'voisin',center:'centre',theater:'théâtre',apartment:'appartement',elevator:'ascenseur',sidewalk:'trottoir',truck:'camion',gas:'essence',gasoline:'essence',vacation:'vacances',soccer:'football',sneakers:'baskets',cookie:'biscuit sucré',candy:'bonbon',fries:'frites',chips:'chips',restroom:'toilettes',bathroom:'salle de bains / toilettes',cellphone:'téléphone portable',cell:'portable',store:'magasin',parking:'stationnement',freeway:'autoroute',highway:'route principale / autoroute',zip:'code postal',mail:'courrier',fall:'automne',pants:'pantalon',sweater:'pull',movie:'film',movies:'cinéma',schedule:'emploi du temps',awesome:'génial',buddy:'copain',guys:'vous / les gars',wanna:'vouloir (forme orale de want to)',gonna:'aller faire (forme orale de going to)',gotta:'devoir (forme orale de got to)'};
+function coachSayUS(w){if(!('speechSynthesis'in window))return;let u=new SpeechSynthesisUtterance(w);u.lang='en-US';u.rate=.82;let v=speechSynthesis.getVoices().find(v=>v.lang.toLowerCase()==='en-us');if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u)}
+async function askCoach(){
+let raw=$('coachInput').value.trim();if(!raw){coachAnswer('Écris un mot ou dicte ta question.');return}
+let clean=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+let phrases={'for here':'For here, please. = Sur place, s’il vous plaît.','to go':'To go, please. = À emporter, s’il vous plaît.','can i get':'Can I get…? = Est-ce que je peux avoir… ?'};
+let phrase=Object.keys(phrases).find(p=>clean.includes(p));if(phrase){coachAnswer(phrases[phrase]);return}
+let words=clean.match(/[a-z]+(?:[’'][a-z]+)?/g)||[];
+let ignored=new Set(['que','quoi','est','ce','ca','c','veut','dire','signifie','mot','en','anglais','americain','traduction','de','du','des','le','la','les','un','une','comment','prononce','on','pour','moi','explique','s','il','te','plait','what','does','mean','translate','meaning','of']);
+let target=words.filter(w=>!ignored.has(w)).pop();
+if(!target){coachAnswer('Quel mot américain veux-tu comprendre ?');return}
+let key=target.replace(/[’']/g,'');
+let entry=coachLexicon[key];
+if(entry){coachAnswer(entry[0]+' = '+entry[1]+'\n\nExemple : '+entry[2]);coachSayUS(entry[0]);return}
+if(usVariants[key]){coachAnswer(key+' = '+usVariants[key]+'\n\nVocabulaire américain (US).');coachSayUS(key);return}
+coachAnswer('Je recherche « '+key+' » dans le dictionnaire américain gratuit…');
+try{
+let response=await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(key));
+if(!response.ok)throw Error('not-found');
+let data=await response.json();
+let definitions=(data[0]?.meanings||[]).flatMap(m=>(m.definitions||[]).slice(0,2).map(d=>({part:m.partOfSpeech,definition:d.definition,example:d.example}))).slice(0,3);
+if(!definitions.length)throw Error('not-found');
+let translations={'noun':'nom','verb':'verbe','adjective':'adjectif','adverb':'adverbe','preposition':'préposition','pronoun':'pronom','interjection':'interjection'};
+let message=key+' · dictionnaire anglais américain\n\n'+definitions.map(d=>(translations[d.part]||d.part)+' : '+d.definition+(d.example?'\nExemple : '+d.example:'')).join('\n\n')+'\n\nDéfinition en anglais simple. La traduction française de ce mot n’est pas encore disponible.';
+coachAnswer(message);coachSayUS(key);
+}catch(e){coachAnswer('« '+key+' » : ce mot n’est pas encore dans mon dictionnaire français intégré. La recherche gratuite de définitions nécessite Internet. Je ne vais pas inventer une traduction.')}
+}
 function coachListen(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){coachAnswer("Le micro de dictée n'est pas disponible dans ce navigateur. Écris ta question à la place.");return}let r=new SR();r.lang='fr-FR';r.interimResults=false;coachAnswer('Je t’écoute…');r.onresult=e=>{$('coachInput').value=e.results[0][0].transcript;askCoach()};r.onerror=e=>coachAnswer('Micro indisponible : '+e.error+'. Tu peux écrire ta question.');try{r.start()}catch(e){coachAnswer('Impossible de démarrer le micro. Vérifie son autorisation dans Chrome.')}}
 function resetConfirm(){if(confirm('Effacer toute ta progression sur cet appareil ?')){localStorage.removeItem(KEY);location.reload()}}render();</script></body></html>
